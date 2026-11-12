@@ -1,23 +1,41 @@
-name: Publicar imagen en Docker Hub
+name: Pruebas y publicación de RomaForte
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - "v*"
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  docker:
-    name: Construir y publicar
+  test:
+    name: Pruebas backend
     runs-on: ubuntu-latest
     steps:
       - name: Obtener código
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Ejecutar pruebas unitarias, de integración y E2E
+        run: npm run test:backend
+
+  docker:
+    name: Construir y publicar en Docker Hub
+    needs: test
+    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v7
 
       - name: Preparar etiquetas
         id: meta
